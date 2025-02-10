@@ -10,10 +10,10 @@ from email import encoders
 
 app = Flask(__name__)
 
-# Configurações da API da Jucesp
+
 JUCESP_API_URL = "https://openapi.api.rota.sp.gov.br/jucesp-rfb/cnpj/"
 
-# Configurações do servidor de e-mail (Usando variáveis de ambiente para segurança)
+
 SMTP_SERVER = "smtp.gmail.com"  
 SMTP_PORT = 587
 EMAIL = os.getenv("EMAIL_USER")  # Obtém o e-mail das variáveis de ambiente
@@ -23,7 +23,7 @@ DESTINATARIO = "sindibor@borracha.com.br"
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
-        # Recebe os dados do formulário do Jotform com os nomes exatos
+       
         form_data = request.json
         cnpj = form_data.get("cnpj62", "").strip()
         razaoSocial = form_data.get("razaoSocial59", "").strip()
@@ -35,19 +35,16 @@ def webhook():
         if not cnpj:
             return jsonify({"error": "CNPJ não fornecido"}), 400
 
-        # Consulta a API da Jucesp
         response = requests.get(f"{JUCESP_API_URL}{cnpj}")
         if response.status_code != 200:
             return jsonify({"error": "Erro ao consultar a API da Jucesp"}), 500
 
-        # Processa os dados retornados pela API
         api_data = response.json()
         api_razaoSocial = api_data.get("nome_empresarial", "Não disponível").strip()
         api_nomeFantasia = api_data.get("nome_fantasia", "Não disponível").strip()
         api_capSocial = api_data.get("capital_social", "Não disponível").strip()
         api_cnae = api_data.get("cnae_principal", "Não disponível").strip()
 
-        # Criar a planilha com os dados
         file_name = f"comparacao_cnpj_{cnpj}.xlsx"
         df = pd.DataFrame({
             "Campo": [
@@ -70,7 +67,6 @@ def webhook():
 
         df.to_excel(file_name, index=False)
 
-        # Criar o corpo do e-mail
         email_body = f"""
         CNPJ: {cnpj}
         Razão Social (Formulário): {razaoSocial}
@@ -85,10 +81,10 @@ def webhook():
         E-mail do Responsável: {emailPara}
         """
 
-        # Enviar e-mail
+
         send_email(email_body, file_name)
 
-        # Remover o arquivo após o envio
+
         os.remove(file_name)
 
         return jsonify({"message": "E-mail enviado com sucesso!"})
@@ -107,7 +103,7 @@ def send_email(body, file_path):
         # Adicionar corpo do e-mail
         msg.attach(MIMEText(body, "plain"))
 
-        # Anexar planilha
+    
         attachment = open(file_path, "rb")
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
@@ -116,7 +112,7 @@ def send_email(body, file_path):
         msg.attach(part)
         attachment.close()
 
-        # Enviar e-mail via SMTP
+       
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
         server.login(EMAIL, PASSWORD)
